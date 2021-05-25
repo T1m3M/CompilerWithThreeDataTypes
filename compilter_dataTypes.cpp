@@ -165,7 +165,8 @@ enum TokenType{
                 LEFT_PAREN, RIGHT_PAREN,
                 LEFT_BRACE, RIGHT_BRACE,
                 ID, NUM,
-                ENDFILE, ERROR
+                ENDFILE, ERROR,
+                INT, REAL, BOOL
               };
 
 // Used for debugging only /////////////////////////////////////////////////////////
@@ -178,7 +179,8 @@ const char* TokenTypeStr[]=
                 "LeftParen", "RightParen",
                 "LeftBrace", "RightBrace",
                 "ID", "Num",
-                "EndFile", "Error"
+                "EndFile", "Error",
+                "INT", "REAL", "BOOL"
             };
 
 struct Token
@@ -199,7 +201,10 @@ const Token reserved_words[]=
     Token(REPEAT, "repeat"),
     Token(UNTIL, "until"),
     Token(READ, "read"),
-    Token(WRITE, "write")
+    Token(WRITE, "write"),
+    Token(INT, "int"),
+    Token(REAL, "real"),
+    Token(BOOL, "bool")
 };
 const int num_reserved_words=sizeof(reserved_words)/sizeof(reserved_words[0]);
 
@@ -293,36 +298,44 @@ void GetNextToken(CompilerInfo* pci, Token* ptoken)
 
 // program -> stmtseq
 // stmtseq -> stmt { ; stmt }
-// stmt -> ifstmt | repeatstmt | assignstmt | readstmt | writestmt
-// ifstmt -> if exp then stmtseq [ else stmtseq ] end
+// stmt -> dclrstmt | ifstmt | repeatstmt | assignstmt | readstmt | writestmt
+// dclrstmt -> (int|real|bool) identifier
+// ifstmt -> if expr then stmtseq [ else stmtseq ] end
 // repeatstmt -> repeat stmtseq until expr
 // assignstmt -> identifier := expr
+//   predicate: identifier.type == expr.type
 // readstmt -> read identifier
 // writestmt -> write expr
-// expr -> mathexpr [ (<|=) mathexpr ]
-// mathexpr -> term { (+|-) term }    left associative
-// term -> factor { (*|/) factor }    left associative
-// factor -> newexpr { ^ newexpr }    right associative
+// expr -> mathexpr[1] [ (<|=) mathexpr[2] ]
+//   predicate: mathexpr[1].type == mathexpr[2].type
+// mathexpr -> term[1] { (+|-) term[2] }    left associative
+//   predicate: (term[1].type == term[2].type) AND term[1].type != bool
+// term -> factor[1] { (*|/) factor[2] }    left associative
+//   predicate: factor[1].type == factor[2].type AND factor[1].type != bool
+// factor -> newexpr[1] { ^ newexpr[2] }    right associative
+//   predicate: newexpr[1].type == newexpr[2].type AND newexpr[1].type != bool
 // newexpr -> ( mathexpr ) | number | identifier
+//   attribute computation function: newexpr.type <- identifier.type
+//   attribute computation function: identifier.type <- lookup(identifier.string)
 
 enum NodeKind{
                 IF_NODE, REPEAT_NODE, ASSIGN_NODE, READ_NODE, WRITE_NODE,
-                OPER_NODE, NUM_NODE, ID_NODE
+                OPER_NODE, NUM_NODE, ID_NODE, DCLR_NODE
              };
 
 // Used for debugging only /////////////////////////////////////////////////////////
 const char* NodeKindStr[]=
             {
                 "If", "Repeat", "Assign", "Read", "Write",
-                "Oper", "Num", "ID"
+                "Oper", "Num", "ID", "Declare"
             };
 
-enum ExprDataType {VOID, INTEGER, BOOLEAN};
+enum ExprDataType {VOID, INTEGER, BOOLEAN, DOUBLE};
 
 // Used for debugging only /////////////////////////////////////////////////////////
 const char* ExprDataTypeStr[]=
             {
-                "Void", "Integer", "Boolean"
+                "Void", "Integer", "Boolean", "Double"
             };
 
 #define MAX_CHILDREN 3
@@ -588,14 +601,51 @@ TreeNode* IfStmt(CompilerInfo* pci, ParseInfo* ppi)
     return tree;
 }
 
-// stmt -> ifstmt | repeatstmt | assignstmt | readstmt | writestmt
+// dclrstmt -> (int|real|bool) identifier
+TreeNode* DclrStmt(CompilerInfo* pci, ParseInfo* ppi)
+{
+    // write to the debug file Start DclrStmt
+    pci->debug_file.Out("Start DclrStmt");
+
+    // construct a new tree of kind DCLR_NODE
+    TreeNode* tree=new TreeNode;
+    tree->node_kind=DCLR_NODE;
+    // get the current line number
+    tree->line_num=pci->in_file.cur_line_num;
+
+    // define type of the node
+    if (ppi->next_token.type == INT)
+        tree->expr_data_type = INTEGER;
+    if (ppi->next_token.type == REAL)
+        tree->expr_data_type = DOUBLE;
+    if (ppi->next_token.type == BOOL)
+        tree->expr_data_type = BOOLEAN;
+
+    // match the type and advance pointer
+    Match(pci, ppi, ppi->next_token.type);
+
+    // copying variable name to the id attribute
+    AllocateAndCopy(&tree->id, ppi->next_token.str);
+
+    // match the variable name and advance pointer
+    Match(pci, ppi, ID);
+
+    // write to the debug file End DclrStmt
+    pci->debug_file.Out("End DclrStmt");
+
+    // return the tree to construct
+    return tree;
+}
+
+// stmt -> dclrstmt | ifstmt | repeatstmt | assignstmt | readstmt | writestmt
 TreeNode* Stmt(CompilerInfo* pci, ParseInfo* ppi)
 {
     pci->debug_file.Out("Start Stmt");
 
     // Compare the next token with the First() of possible statements
     TreeNode* tree=0;
-    if(ppi->next_token.type==IF) tree=IfStmt(pci, ppi);
+    if(ppi->next_token.type==INT || ppi->next_token.type==REAL || ppi->next_token.type==BOOL) tree=DclrStmt(pci, ppi);
+    else if(ppi->next_token.type==IF) tree=IfStmt(pci, ppi);
     else if(ppi->next_token.type==REPEAT) tree=RepeatStmt(pci, ppi);
     else if(ppi->next_token.type==ID) tree=AssignStmt(pci, ppi);
     else if(ppi->next_token.type==READ) tree=ReadStmt(pci, ppi);
@@ -650,6 +700,7 @@ void PrintTree(TreeNode* node, int sh=0)
     printf("[%s]", NodeKindStr[node->node_kind]);
 
     if(node->node_kind==OPER_NODE) printf("[%s]", TokenTypeStr[node->oper]);
+    else if(node->node_kind==DCLR_NODE) printf("[%s]", node->id);
     else if(node->node_kind==NUM_NODE) printf("[%d]", node->num);
     else if(node->node_kind==ID_NODE || node->node_kind==READ_NODE || node->node_kind==ASSIGN_NODE) printf("[%s]", node->id);
 
