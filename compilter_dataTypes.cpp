@@ -854,7 +854,8 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 {
     int i;
 
-    if(node->node_kind==ID_NODE || node->node_kind==READ_NODE || node->node_kind==ASSIGN_NODE)
+    // add the declared variables to the symbol table
+    if(node->node_kind==DCLR_NODE)
         symbol_table->Insert(node->id, node->line_num);
 
     for(i=0;i<MAX_CHILDREN;i++) if(node->child[i]) Analyze(node->child[i], symbol_table);
