@@ -739,6 +739,7 @@ struct LineLocation
 struct VariableInfo
 {
     char* name;
+    ExprDataType datatype;
     int memloc;
     LineLocation* head_line; // the head of linked list of source line locations
     LineLocation* tail_line; // the tail of linked list of source line locations
@@ -772,7 +773,7 @@ struct SymbolTable
         return 0;
     }
 
-    void Insert(const char* name, int line_num)
+    void Insert(const char* name, int line_num, ExprDataType type)
     {
         LineLocation* lineloc=new LineLocation;
         lineloc->line_num=line_num;
@@ -800,6 +801,7 @@ struct SymbolTable
         vi->next_var=0;
         vi->memloc=num_vars++;
         AllocateAndCopy(&vi->name, name);
+        vi->datatype=type;
 
         if(!prev) var_info[h]=vi;
         else prev->next_var=vi;
@@ -813,7 +815,7 @@ struct SymbolTable
             VariableInfo* curv=var_info[i];
             while(curv)
             {
-                printf("[Var=%s][Mem=%d]", curv->name, curv->memloc);
+                printf("[Var=%s][Mem=%d][Type=%s]", curv->name, curv->memloc, ExprDataTypeStr[curv->datatype]);
                 LineLocation* curl=curv->head_line;
                 while(curl)
                 {
@@ -856,7 +858,7 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 
     // add the declared variables to the symbol table
     if(node->node_kind==DCLR_NODE)
-        symbol_table->Insert(node->id, node->line_num);
+        symbol_table->Insert(node->id, node->line_num, node->expr_data_type);
 
     for(i=0;i<MAX_CHILDREN;i++) if(node->child[i]) Analyze(node->child[i], symbol_table);
 
