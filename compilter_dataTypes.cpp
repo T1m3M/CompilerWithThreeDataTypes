@@ -32,6 +32,172 @@ end
 // Comments {}
 
 ////////////////////////////////////////////////////////////////////////////////////
+// Test Cases //////////////////////////////////////////////////////////////////////
+
+/*
+{ test case 1 }
+
+int x; real y; bool z;
+read x; write x;
+read y; write y;
+read z; write z
+
+{ test case 2 }
+
+x := 5 {Undefined error}
+
+{ test case 3 }
+
+int x;
+x := 2.5 {bad assignment error}
+
+{ test case 4 }
+
+real x;
+x := 2.5 + 5;
+write x {x := 7.5}
+
+{ test case 5 }
+
+real x; int y;
+y := x + y {error 1: cannot assign different types}
+           {error 2: cannot assign real number to an integer variable}
+
+{ test case 6 }
+
+bool x;
+x := 5 + 6 {error cannot assign different types}
+
+{ test case 7 }
+
+bool x; int y;
+y := x + 1 {error 1: cannot do operations on boolean variables}
+           {error 2: cannot assign different types}
+
+{ test case 8 }
+
+int x; real y;
+y := 3.14;
+x := y {error cannot assign different types}
+
+{ test case 9 }
+
+real y;
+y := 3.14;
+
+if y = 3.14 then
+  write y {Val: 3.140}
+
+end
+
+{ test case 10 }
+
+bool success;
+success := 1;
+
+if success then
+  write success {Val: 1}
+
+end
+
+{ test case 11 }
+
+int x; real y;
+
+x := 1;
+y := 2;
+
+repeat
+  y := y * 2;
+  x := x + 1
+  until x=10;
+  write y {Val: 1024.000}
+
+end
+
+{ test case 12 }
+
+int x; real y;
+
+x := 2;
+y := 5;
+
+write x * y {error cannot do operations of different types}
+
+{ test case 13 }
+
+real x; real y;
+
+x := 2;
+y := 5;
+
+write x + y / 2 {Val: 4.500}
+
+{ test case 14 }
+
+int x; int y;
+
+x := 2;
+y := 5;
+
+write x + y / 2 {Val: 4}
+
+{ test case 15 }
+
+int x; int y;
+
+x := 5 * 2.5 + y; {error 1: cannot do operations of different types}
+                  {error 2: cannot assign different types}
+
+write x
+
+{ test case 16 }
+
+real pi;
+pi := 3.14;
+
+real radius; {radius := 5}
+
+read radius;
+write pi*radius^2 {Val: 78.500}
+
+{ test case 17 }
+
+bool x; bool y;
+
+x := 0; {valid assignment}
+y := 5 + 2 {error cannot assign different type}
+
+{ test case 18 }
+
+real x; int y;
+
+y := 5;
+
+x := .5 * (20 + y); {same types in the same expressions}
+
+write x {Val: 12.500}
+
+{ test case 19 }
+
+real x; int y;
+x := 5;
+
+y := 2 * (20 + x); {error cannot assign different types}
+                   {int * (int + real) = int * real}
+
+{ test case 20 }
+
+real x; real y;
+
+read x; {x := 2}
+read y; {y := 5}
+
+write (x ^ y) * 2  {Val: 64.000}
+
+*/
+
+////////////////////////////////////////////////////////////////////////////////////
 // Strings /////////////////////////////////////////////////////////////////////////
 
 bool Equals(const char* a, const char* b)
@@ -921,7 +1087,7 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 
             // don't allow operations with boolean variables
             else if(node->child[0]->expr_data_type == BOOLEAN || node->child[1]->expr_data_type == BOOLEAN)
-                printf("ERROR LINE %d CANNOT DO OPERATIONS OF BOOLEAN VARIABLE\n", node->line_num);
+                printf("ERROR LINE %d CANNOT DO OPERATIONS ON BOOLEAN VARIABLES\n", node->line_num);
 
             // if at least one of operands is real then assign parent type to real
             else if(node->child[0]->expr_data_type == DOUBLE || node->child[1]->expr_data_type == DOUBLE)
@@ -940,8 +1106,9 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
         // and it's not assigning a number to a real variable
         // then show an error
         if (node->expr_data_type != node->child[0]->expr_data_type
-            && (node->expr_data_type != DOUBLE || node->child[0]->node_kind != NUM_NODE))
-            printf("ERROR LINE %d CANNOT ASSIGN REAL NUMBER TO AN INTEGER VARIABLE\n", node->line_num);
+            && (node->expr_data_type != DOUBLE || node->child[0]->node_kind != NUM_NODE)
+               && (node->expr_data_type != BOOLEAN || node->child[0]->node_kind != NUM_NODE))
+            printf("ERROR LINE %d CANNOT ASSIGN DIFFERENT TYPES\n", node->line_num);
     }
 
     if(node->node_kind==IF_NODE && node->child[0]->expr_data_type!=BOOLEAN) printf("ERROR If test must be BOOLEAN\n");
@@ -953,7 +1120,8 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 ////////////////////////////////////////////////////////////////////////////////////
 // Code Generator //////////////////////////////////////////////////////////////////
 
-int Power(int a, int b)
+// convert power function's type to double to accept real type
+double Power(double a, double b)
 {
     if(a==0) return 0;
     if(b==0) return 1;
