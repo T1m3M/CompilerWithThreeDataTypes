@@ -856,7 +856,20 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 {
     int i;
 
-    // add the declared variables to the symbol table
+    // if the node is a variable or used to read or assign a variable
+    // the variable should be checked if defined in the symbol table
+    if(node->node_kind==ID_NODE || node->node_kind==READ_NODE || node->node_kind==ASSIGN_NODE)
+    {
+        // search symbol table for this variable
+        if(symbol_table->Find(node->id) == 0) {
+            // if not defined show a clear error with line number
+            // and throw an exception
+            printf("ERROR: LINE %d VARIABLE %s IS UNDEFINED!\n", node->line_num, node->id);
+            throw 0;
+        }
+    }
+
+    // add the declared variables to the symbol table with their type
     if(node->node_kind==DCLR_NODE)
         symbol_table->Insert(node->id, node->line_num, node->expr_data_type);
 
