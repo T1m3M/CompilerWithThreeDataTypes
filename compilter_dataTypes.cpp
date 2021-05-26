@@ -913,25 +913,35 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
     {
         if(node->oper==EQUAL || node->oper==LESS_THAN) node->expr_data_type=BOOLEAN;
         else {
-            // don't allow operations with different types
-            if(node->child[0]->expr_data_type != node->child[1]->expr_data_type)
+
+            // don't allow operations with between variables with different types
+            if(node->child[0]->expr_data_type != node->child[1]->expr_data_type
+                && (node->child[0]->node_kind != NUM_NODE && node->child[1]->node_kind != NUM_NODE))
                 printf("ERROR LINE %d CANNOT DO OPERATIONS OF DIFFERENT TYPES\n", node->line_num);
+
             // don't allow operations with boolean variables
             else if(node->child[0]->expr_data_type == BOOLEAN || node->child[1]->expr_data_type == BOOLEAN)
                 printf("ERROR LINE %d CANNOT DO OPERATIONS OF BOOLEAN VARIABLE\n", node->line_num);
-            // if same type and not boolean assign the parent node type to the child's type
+
+            // if at least one of operands is real then assign parent type to real
+            else if(node->child[0]->expr_data_type == DOUBLE || node->child[1]->expr_data_type == DOUBLE)
+                node->expr_data_type = DOUBLE;
+
+            // if all operands are integers assign parent type to integer
             else
-                node->expr_data_type = node->child[0]->expr_data_type;
+                node->expr_data_type = INTEGER;
         }
     }
-    //else if(node->node_kind==ID_NODE || node->node_kind==NUM_NODE) node->expr_data_type=INTEGER;
 
     // if the node is doing assignment
     if(node->node_kind==ASSIGN_NODE)
     {
-        // if both assignment sides are not of the same type show an error
-        if (node->expr_data_type != node->child[0]->expr_data_type)
-            printf("ERROR LINE %d CANNOT ASSIGN VARIABLES OF DIFFERENT TYPES\n", node->line_num);
+        // if both assignment sides are not of the same type
+        // and it's not assigning a number to a real variable
+        // then show an error
+        if (node->expr_data_type != node->child[0]->expr_data_type
+            && (node->expr_data_type != DOUBLE || node->child[0]->node_kind != NUM_NODE))
+            printf("ERROR LINE %d CANNOT ASSIGN REAL NUMBER TO AN INTEGER VARIABLE\n", node->line_num);
     }
 
     if(node->node_kind==IF_NODE && node->child[0]->expr_data_type!=BOOLEAN) printf("ERROR If test must be BOOLEAN\n");
@@ -951,13 +961,13 @@ int Power(int a, int b)
     return 0;
 }
 
-int Evaluate(TreeNode* node, SymbolTable* symbol_table, int* variables)
+double Evaluate(TreeNode* node, SymbolTable* symbol_table, double* variables)
 {
     if(node->node_kind==NUM_NODE) return node->num;
     if(node->node_kind==ID_NODE) return variables[symbol_table->Find(node->id)->memloc];
 
-    int a=Evaluate(node->child[0], symbol_table, variables);
-    int b=Evaluate(node->child[1], symbol_table, variables);
+    double a=Evaluate(node->child[0], symbol_table, variables);
+    double b=Evaluate(node->child[1], symbol_table, variables);
 
     if(node->oper==EQUAL) return a==b;
     if(node->oper==LESS_THAN) return a<b;
@@ -970,7 +980,7 @@ int Evaluate(TreeNode* node, SymbolTable* symbol_table, int* variables)
     return 0;
 }
 
-void RunProgram(TreeNode* node, SymbolTable* symbol_table, int* variables)
+void RunProgram(TreeNode* node, SymbolTable* symbol_table, double* variables)
 {
     if(node->node_kind==IF_NODE)
     {
@@ -980,18 +990,24 @@ void RunProgram(TreeNode* node, SymbolTable* symbol_table, int* variables)
     }
     if(node->node_kind==ASSIGN_NODE)
     {
-        int v=Evaluate(node->child[0], symbol_table, variables);
+        // evaluate and return a result to a double variable
+        double v=Evaluate(node->child[0], symbol_table, variables);
         variables[symbol_table->Find(node->id)->memloc]=v;
     }
     if(node->node_kind==READ_NODE)
     {
         printf("Enter %s: ", node->id);
-        scanf("%d", &variables[symbol_table->Find(node->id)->memloc]);
+        scanf("%lf", &variables[symbol_table->Find(node->id)->memloc]);
     }
     if(node->node_kind==WRITE_NODE)
     {
-        int v=Evaluate(node->child[0], symbol_table, variables);
-        printf("Val: %d\n", v);
+        // evaluate and return a result to a double variable
+        double v=Evaluate(node->child[0], symbol_table, variables);
+        // print the value based on it's type
+        if(node->child[0]->expr_data_type == DOUBLE)
+            printf("Val: %.3f\n", v);
+        else
+            printf("Val: %d\n", (int)v);
     }
     if(node->node_kind==REPEAT_NODE)
     {
@@ -1007,7 +1023,7 @@ void RunProgram(TreeNode* node, SymbolTable* symbol_table, int* variables)
 void RunProgram(TreeNode* syntax_tree, SymbolTable* symbol_table)
 {
     int i;
-    int* variables=new int[symbol_table->num_vars];
+    double* variables=new double[symbol_table->num_vars];
     for(i=0;i<symbol_table->num_vars;i++) variables[i]=0;
     RunProgram(syntax_tree, symbol_table, variables);
     delete[] variables;
