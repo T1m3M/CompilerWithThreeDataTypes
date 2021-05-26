@@ -875,6 +875,17 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 
     for(i=0;i<MAX_CHILDREN;i++) if(node->child[i]) Analyze(node->child[i], symbol_table);
 
+    // define all ID nodes' datatypes in the tree
+    // for easy type checking in operations afterwards
+    for(i=0;i<MAX_CHILDREN;i++){
+        if(node->child[i] && node->child[i]->node_kind == ID_NODE) {
+            //printf("var[%d] %s type is %s\n", i, node->child[i]->id,
+                   ExprDataTypeStr[symbol_table->Find(node->child[i]->id)->datatype]);
+            node->child[i]->expr_data_type = symbol_table->Find(node->child[i]->id)->datatype;
+        }
+    }
+    //printf("--------------\n");
+
     if(node->node_kind==OPER_NODE)
     {
         if(node->oper==EQUAL || node->oper==LESS_THAN) node->expr_data_type=BOOLEAN;
