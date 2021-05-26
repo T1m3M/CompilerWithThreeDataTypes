@@ -405,8 +405,10 @@ TreeNode* NewExpr(CompilerInfo* pci, ParseInfo* ppi)
             *num_str++;
 
             // while there's a digit get the fraction value
-            while(IsDigit(num_str[0]))
-                tree->num = tree->num + ((*num_str++) - '0')/(double)divisor; divisor *= 10;
+            while(IsDigit(num_str[0])) {
+                tree->num = tree->num + ((*num_str++) - '0') / (double) divisor;
+                divisor *= 10;
+            }
         }
         // if there is no dot set the type to INTEGER (int)
         else tree->expr_data_type = INTEGER;
@@ -729,7 +731,8 @@ void PrintTree(TreeNode* node, int sh=0)
 
     if(node->node_kind==OPER_NODE) printf("[%s]", TokenTypeStr[node->oper]);
     else if(node->node_kind==DCLR_NODE) printf("[%s]", node->id);
-    else if(node->node_kind==NUM_NODE) printf("[%d]", node->num);
+    else if(node->node_kind==NUM_NODE && node->expr_data_type==INTEGER) printf("[%d]", (int)node->num);
+    else if(node->node_kind==NUM_NODE && node->expr_data_type==DOUBLE) printf("[%.3f]", node->num);
     else if(node->node_kind==ID_NODE || node->node_kind==READ_NODE || node->node_kind==ASSIGN_NODE) printf("[%s]", node->id);
 
     if(node->expr_data_type!=VOID) printf("[%s]", ExprDataTypeStr[node->expr_data_type]);
