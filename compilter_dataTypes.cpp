@@ -888,13 +888,21 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
     {
         // don't allow operations with different types
         if(node->child[0]->expr_data_type != node->child[1]->expr_data_type)
-            printf("ERROR LINE %d CANNOT DO OPERATIONS WITH DIFFERENT TYPES\n", node->line_num);
+            printf("ERROR LINE %d CANNOT DO OPERATIONS OF DIFFERENT TYPES\n", node->line_num);
         // don't allow operations with boolean variables
         else if(node->child[0]->expr_data_type == BOOLEAN || node->child[1]->expr_data_type == BOOLEAN)
-            printf("ERROR LINE %d CANNOT DO OPERATIONS ON BOOLEAN VARIABLE\n", node->line_num);
+            printf("ERROR LINE %d CANNOT DO OPERATIONS OF BOOLEAN VARIABLE\n", node->line_num);
         // if same type and not boolean assign the parent node type to the child's type
         else
             node->expr_data_type = node->child[0]->expr_data_type;
+    }
+
+    // if the node is doing assignment
+    if(node->node_kind==ASSIGN_NODE)
+    {
+        // if both assignment sides are not of the same type show an error
+        if (node->expr_data_type != node->child[0]->expr_data_type)
+            printf("ERROR LINE %d CANNOT ASSIGN VARIABLES OF DIFFERENT TYPES\n", node->line_num);
     }
 
     if(node->node_kind==IF_NODE && node->child[0]->expr_data_type!=BOOLEAN) printf("ERROR If test must be BOOLEAN\n");
