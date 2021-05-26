@@ -166,8 +166,7 @@ enum TokenType{
                 LEFT_BRACE, RIGHT_BRACE,
                 ID, NUM,
                 ENDFILE, ERROR,
-                INT, REAL, BOOL,
-                DOT
+                INT, REAL, BOOL
               };
 
 // Used for debugging only /////////////////////////////////////////////////////////
@@ -181,8 +180,7 @@ const char* TokenTypeStr[]=
                 "LeftBrace", "RightBrace",
                 "ID", "Num",
                 "EndFile", "Error",
-                "INT", "REAL", "BOOL",
-                "Dot"
+                "INT", "REAL", "BOOL"
             };
 
 struct Token
@@ -226,12 +224,12 @@ const Token symbolic_tokens[]=
     Token(LEFT_PAREN, "("),
     Token(RIGHT_PAREN, ")"),
     Token(LEFT_BRACE, "{"),
-    Token(RIGHT_BRACE, "}"),
-    Token(DOT, ".")
+    Token(RIGHT_BRACE, "}")
 };
 const int num_symbolic_tokens=sizeof(symbolic_tokens)/sizeof(symbolic_tokens[0]);
 
 inline bool IsDigit(char ch){return (ch>='0' && ch<='9');}
+inline bool IsDot(char ch){return (ch=='.');} // return true if the character is a dot
 inline bool IsLetter(char ch){return ((ch>='a' && ch<='z') || (ch>='A' && ch<='Z'));}
 inline bool IsLetterOrUnderscore(char ch){return (IsLetter(ch) || ch=='_');}
 
@@ -266,10 +264,12 @@ void GetNextToken(CompilerInfo* pci, Token* ptoken)
         ptoken->type=symbolic_tokens[i].type;
         Copy(ptoken->str, symbolic_tokens[i].str);
     }
-    else if(IsDigit(s[0]))
+    // scanning the full number integer or float
+    else if(IsDigit(s[0]) || IsDot(s[0]))
     {
         int j=1;
-        while(IsDigit(s[j])) j++;
+        // don't ignore the dot
+        while(IsDigit(s[j]) || IsDot(s[j])) j++;
 
         ptoken->type=NUM;
         Copy(ptoken->str, s, j);
@@ -350,7 +350,7 @@ struct TreeNode
 
     NodeKind node_kind;
 
-    union{TokenType oper; int num; char* id;}; // defined for expression/int/identifier only
+    union{TokenType oper; double num; char* id;}; // defined for expression/int/identifier only
     ExprDataType expr_data_type; // defined for expression/int/identifier only
 
     int line_num;
@@ -386,7 +386,32 @@ TreeNode* NewExpr(CompilerInfo* pci, ParseInfo* ppi)
         TreeNode* tree=new TreeNode;
         tree->node_kind=NUM_NODE;
         char* num_str=ppi->next_token.str;
-        tree->num=0; while(*num_str) tree->num=tree->num*10+((*num_str++)-'0');
+        tree->num=0;
+
+        // convert string to number
+        while(IsDigit(num_str[0]))
+            tree->num = tree->num * 10 + ((*num_str++) - '0');
+
+        // to calculate the numbers after the floating dot
+        int divisor = 10;
+
+        // if there's a dot calculate the fractional value
+        if(IsDot(num_str[0]))
+        {
+            // set the type of the NUM node to DOUBLE (real)
+            tree->expr_data_type = DOUBLE;
+
+            // escape the dot
+            *num_str++;
+
+            // while there's a digit get the fraction value
+            while(IsDigit(num_str[0]))
+                tree->num = tree->num + ((*num_str++) - '0')/(double)divisor; divisor *= 10;
+        }
+        // if there is no dot set the type to INTEGER (int)
+        else tree->expr_data_type = INTEGER;
+
+
         tree->line_num=pci->in_file.cur_line_num;
         Match(pci, ppi, ppi->next_token.type);
 
