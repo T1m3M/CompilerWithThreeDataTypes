@@ -335,7 +335,7 @@ enum ExprDataType {VOID, INTEGER, BOOLEAN, DOUBLE};
 // Used for debugging only /////////////////////////////////////////////////////////
 const char* ExprDataTypeStr[]=
             {
-                "Void", "Integer", "Boolean", "Double"
+                "Void", "Integer", "Boolean", "Real"
             };
 
 #define MAX_CHILDREN 3
@@ -879,8 +879,7 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
     // for easy type checking in operations afterwards
     for(i=0;i<MAX_CHILDREN;i++){
         if(node->child[i] && node->child[i]->node_kind == ID_NODE) {
-            //printf("var[%d] %s type is %s\n", i, node->child[i]->id,
-                   ExprDataTypeStr[symbol_table->Find(node->child[i]->id)->datatype]);
+            //printf("var[%d] %s type is %s\n", i, node->child[i]->id, ExprDataTypeStr[symbol_table->Find(node->child[i]->id)->datatype]);
             node->child[i]->expr_data_type = symbol_table->Find(node->child[i]->id)->datatype;
         }
     }
