@@ -166,7 +166,8 @@ enum TokenType{
                 LEFT_BRACE, RIGHT_BRACE,
                 ID, NUM,
                 ENDFILE, ERROR,
-                INT, REAL, BOOL
+                INT, REAL, BOOL,
+                DOT
               };
 
 // Used for debugging only /////////////////////////////////////////////////////////
@@ -180,7 +181,8 @@ const char* TokenTypeStr[]=
                 "LeftBrace", "RightBrace",
                 "ID", "Num",
                 "EndFile", "Error",
-                "INT", "REAL", "BOOL"
+                "INT", "REAL", "BOOL",
+                "Dot"
             };
 
 struct Token
@@ -224,7 +226,8 @@ const Token symbolic_tokens[]=
     Token(LEFT_PAREN, "("),
     Token(RIGHT_PAREN, ")"),
     Token(LEFT_BRACE, "{"),
-    Token(RIGHT_BRACE, "}")
+    Token(RIGHT_BRACE, "}"),
+    Token(DOT, ".")
 };
 const int num_symbolic_tokens=sizeof(symbolic_tokens)/sizeof(symbolic_tokens[0]);
 
