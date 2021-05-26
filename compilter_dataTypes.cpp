@@ -886,9 +886,17 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 
     if(node->node_kind==OPER_NODE)
     {
-        if(node->child[0]->expr_data_type!=INTEGER || node->child[1]->expr_data_type!=INTEGER)
-            printf("ERROR Operator applied to non-integers\n");
+        // don't allow operations with different types
+        if(node->child[0]->expr_data_type != node->child[1]->expr_data_type)
+            printf("ERROR LINE %d CANNOT DO OPERATIONS WITH DIFFERENT TYPES\n", node->line_num);
+        // don't allow operations with boolean variables
+        else if(node->child[0]->expr_data_type == BOOLEAN || node->child[1]->expr_data_type == BOOLEAN)
+            printf("ERROR LINE %d CANNOT DO OPERATIONS ON BOOLEAN VARIABLE\n", node->line_num);
+        // if same type and not boolean assign the parent node type to the child's type
+        else
+            node->expr_data_type = node->child[0]->expr_data_type;
     }
+
     if(node->node_kind==IF_NODE && node->child[0]->expr_data_type!=BOOLEAN) printf("ERROR If test must be BOOLEAN\n");
     if(node->node_kind==REPEAT_NODE && node->child[1]->expr_data_type!=BOOLEAN) printf("ERROR Repeat test must be BOOLEAN\n");
     if(node->node_kind==WRITE_NODE && node->child[0]->expr_data_type!=INTEGER) printf("ERROR Write works only for INTEGER\n");
