@@ -755,6 +755,13 @@ TreeNode* AssignStmt(CompilerInfo* pci, ParseInfo* ppi)
 
     if(ppi->next_token.type==ID) AllocateAndCopy(&tree->id, ppi->next_token.str);
     Match(pci, ppi, ID);
+
+    // if two IDs consecutively
+    if(ppi->next_token.type==ID){
+        printf("ERROR LINE %d DECLARE VARIABLE WITH UNKNOWN TYPE\n", tree->line_num);
+        throw 0;
+    }
+
     Match(pci, ppi, ASSIGN); tree->child[0]=Expr(pci, ppi);
 
     pci->debug_file.Out("End AssignStmt");
@@ -812,9 +819,9 @@ TreeNode* DclrStmt(CompilerInfo* pci, ParseInfo* ppi)
     // define type of the node
     if (ppi->next_token.type == INT)
         tree->expr_data_type = INTEGER;
-    if (ppi->next_token.type == REAL)
+    else if (ppi->next_token.type == REAL)
         tree->expr_data_type = DOUBLE;
-    if (ppi->next_token.type == BOOL)
+    else if (ppi->next_token.type == BOOL)
         tree->expr_data_type = BOOLEAN;
 
     // match the type and advance pointer
