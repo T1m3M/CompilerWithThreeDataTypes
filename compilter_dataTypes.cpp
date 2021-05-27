@@ -201,6 +201,8 @@ foo x; {error unknown type}
 { test case 22 }
 int x; real x; {error variable already defined}
 
+{test case 23 }
+int x; {error expected variable name}
 */
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -830,9 +832,16 @@ TreeNode* DclrStmt(CompilerInfo* pci, ParseInfo* ppi)
     else if (ppi->next_token.type == BOOL)
         tree->expr_data_type = BOOLEAN;
 
+
     // match the type and advance pointer
     Match(pci, ppi, ppi->next_token.type);
 
+    if(ppi->next_token.type != ID)
+    {
+        printf("ERROR LINE %d EXPECTED VARIABLE NAME\n", tree->line_num);
+        throw 0;
+    }
+    else
     // copying variable name to the id attribute
     AllocateAndCopy(&tree->id, ppi->next_token.str);
 
