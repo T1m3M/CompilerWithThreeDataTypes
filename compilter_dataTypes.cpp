@@ -195,6 +195,12 @@ read y; {y := 5}
 
 write (x ^ y) * 2  {Val: 64.000}
 
+{ test case 21 }
+foo x; {error unknown type}
+
+{ test case 22 }
+int x; real x; {error variable already defined}
+
 */
 
 ////////////////////////////////////////////////////////////////////////////////////
@@ -1078,7 +1084,17 @@ void Analyze(TreeNode* node, SymbolTable* symbol_table)
 
     // add the declared variables to the symbol table with their type
     if(node->node_kind==DCLR_NODE)
-        symbol_table->Insert(node->id, node->line_num, node->expr_data_type);
+    {
+        // if it's not declared already insert to the symbol table
+        // otherwise error
+        if(!symbol_table->Find(node->id))
+            symbol_table->Insert(node->id, node->line_num, node->expr_data_type);
+        else
+        {
+            printf("ERROR: LINE %d VARIABLE ALREADY DEFINED!\n", node->line_num, node->id);
+            throw 0;
+        }
+    }
 
     for(i=0;i<MAX_CHILDREN;i++) if(node->child[i]) Analyze(node->child[i], symbol_table);
 
